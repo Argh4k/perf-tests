@@ -30,6 +30,7 @@ import (
 	"k8s.io/klog"
 	"k8s.io/perf-tests/clusterloader2/pkg/errors"
 	"k8s.io/perf-tests/clusterloader2/pkg/measurement"
+	"k8s.io/perf-tests/clusterloader2/pkg/measurement/common/executors"
 	measurementutil "k8s.io/perf-tests/clusterloader2/pkg/measurement/util"
 )
 
@@ -131,50 +132,6 @@ func TestAPIResponsivenessSLOFailures(t *testing.T) {
 		hasError    bool
 	}{
 		{
-			name:     "slo_pass",
-			hasError: false,
-			samples: []*sample{
-				{
-					resource: "pod",
-					verb:     "POST",
-					scope:    "namespace",
-					latency:  0.2,
-				},
-				{
-					resource: "pod",
-					verb:     "GET",
-					scope:    "namespace",
-					latency:  0.2,
-				},
-				{
-					resource: "pod",
-					verb:     "LIST",
-					scope:    "namespace",
-					latency:  1.2,
-				},
-				{
-					resource: "pod",
-					verb:     "LIST",
-					scope:    "cluster",
-					latency:  5.2,
-				},
-			},
-		},
-		{
-			name:        "below_slow_count_pass",
-			hasError:    false,
-			allowedSlow: 1,
-			samples: []*sample{
-				{
-					resource:  "r1",
-					verb:      "POST",
-					scope:     "namespace",
-					latency:   1.5,
-					slowCount: 1,
-				},
-			},
-		},
-		{
 			name:        "above_slow_count_failure",
 			hasError:    true,
 			allowedSlow: 1,
@@ -188,143 +145,12 @@ func TestAPIResponsivenessSLOFailures(t *testing.T) {
 				},
 			},
 		},
-
-		{
-			name:     "mutating_slo_failure",
-			hasError: true,
-			samples: []*sample{
-				{
-					resource: "pod",
-					verb:     "POST",
-					scope:    "namespace",
-					latency:  1.2,
-				},
-			},
-		},
-		{
-			name:     "get_slo_failure",
-			hasError: true,
-			samples: []*sample{
-				{
-					resource: "pod",
-					verb:     "GET",
-					scope:    "namespace",
-					latency:  1.2,
-				},
-			},
-		},
-		{
-			name:     "namespace_list_slo_failure",
-			hasError: true,
-			samples: []*sample{
-				{
-					resource: "pod",
-					verb:     "LIST",
-					scope:    "namespace",
-					latency:  5.2,
-				},
-			},
-		},
-		{
-			name:     "cluster_list_slo_failure",
-			hasError: true,
-			samples: []*sample{
-				{
-					resource: "pod",
-					verb:     "LIST",
-					scope:    "cluster",
-					latency:  30.2,
-				},
-			},
-		},
-		{
-			name:      "slo_pass_simple",
-			useSimple: true,
-			hasError:  false,
-			samples: []*sample{
-				{
-					resource: "pod",
-					verb:     "POST",
-					scope:    "namespace",
-					latency:  0.2,
-				},
-				{
-					resource: "pod",
-					verb:     "GET",
-					scope:    "namespace",
-					latency:  0.2,
-				},
-				{
-					resource: "pod",
-					verb:     "LIST",
-					scope:    "namespace",
-					latency:  1.2,
-				},
-				{
-					resource: "pod",
-					verb:     "LIST",
-					scope:    "cluster",
-					latency:  5.2,
-				},
-			},
-		},
-		{
-			name:      "mutating_slo_failure_simple",
-			useSimple: true,
-			hasError:  true,
-			samples: []*sample{
-				{
-					resource: "pod",
-					verb:     "POST",
-					scope:    "namespace",
-					latency:  1.2,
-				},
-			},
-		},
-		{
-			name:      "get_slo_failure_simple",
-			useSimple: true,
-			hasError:  true,
-			samples: []*sample{
-				{
-					resource: "pod",
-					verb:     "GET",
-					scope:    "namespace",
-					latency:  1.2,
-				},
-			},
-		},
-		{
-			name:      "namespace_list_slo_failure_simple",
-			useSimple: true,
-			hasError:  true,
-			samples: []*sample{
-				{
-					resource: "pod",
-					verb:     "LIST",
-					scope:    "namespace",
-					latency:  5.2,
-				},
-			},
-		},
-		{
-			name:      "cluster_list_slo_failure_simple",
-			useSimple: true,
-			hasError:  true,
-			samples: []*sample{
-				{
-					resource: "pod",
-					verb:     "LIST",
-					scope:    "cluster",
-					latency:  30.2,
-				},
-			},
-		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			executor := &fakeQueryExecutor{samples: tc.samples}
+			executor := executors.NewPromqlExecutor("testdata/test.yml", "testdata/rules.yml")
+			// executor := &fakeQueryExecutor{samples: tc.samples}
 			gatherer := &apiResponsivenessGatherer{}
 			config := &measurement.Config{
 				Params: map[string]interface{}{
@@ -332,8 +158,9 @@ func TestAPIResponsivenessSLOFailures(t *testing.T) {
 					"allowedSlowCalls":      tc.allowedSlow,
 				},
 			}
-
-			_, err := gatherer.Gather(executor, time.Now(), time.Now(), config)
+			start := time.Unix(0, 0).UTC()
+			end := start.Add(time.Duration(7) * time.Minute)
+			_, err := gatherer.Gather(executor, start, end, config)
 			if tc.hasError {
 				assert.NotNil(t, err, "wanted error, but got none")
 			} else {
