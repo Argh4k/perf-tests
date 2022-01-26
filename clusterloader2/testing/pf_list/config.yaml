@@ -1,0 +1,148 @@
+# Simple test that creates N configmaps 
+# Creates new priority level and flow schema for it
+# Launches X pods that hit apiserver with Y QPS quering for specified object (currently configmaps)
+# For now configmaps and load pods are deployed in the same namespace
+
+
+{{$NAMESPACE_PREFIX := "test-namespace"}}
+{{$NAMESPACE_NAME := "test-namespace-1"}}
+
+{{$NUMBER_OF_CONFIGMAPS := 100}}
+{{$PRIORITY_LEVEL_PREFIX := "list-pl"}}
+{{$PRIORITY_LEVEL_NAME := "list-pl-0"}}
+#For now load pods will use target in url like: api/v1/namespaces/${namespace}/${target}
+#Where namespace will be automagically deducted by clusterloader
+#Response type must be one of {"application/json", "application/yaml", "application/vnd.kubernetes.protobuf"}
+{{$LOAD_POD_TARGET := "configmaps"}}
+{{$LOAD_POD_QPS := 10}}
+{{$LOAD_POD_REPLICAS := 10}}
+{{$LOAD_POD_RESPONSE_TYPE := "application/json"}}
+
+
+name: test
+
+namespace:
+  number: 1
+  prefix: {{ $NAMESPACE_PREFIX }}
+
+tuningSets:
+- name: Uniform1qps
+  qpsLoad:
+    qps: 1
+- name: Unfiorm10qps
+  qpsLoad:
+    qps: 10
+- name: Sequence
+  parallelismLimitedLoad:
+    parallelismLimit: 1
+
+steps:
+
+- name: Creating configmaps and priority level
+  phases:
+  - namespaceRange:
+      min: 1
+      max: 1
+    replicasPerNamespace: {{ $NUMBER_OF_CONFIGMAPS }}
+    tuningSet: Unfiorm10qps
+    objectBundle:
+    - basename: configmap
+      objectTemplatePath: configmap.yaml
+  - replicasPerNamespace: 1
+    tuningSet: Sequence
+    objectBundle:
+    - basename: {{ $PRIORITY_LEVEL_PREFIX }}
+      objectTemplatePath: priorityLevel.yaml
+
+- name: Wait for priority level 10s
+  measurements:
+    - Identifier: Wait
+      Method: Sleep
+      Params:
+        duration: 10s
+
+- name: Creating flow schema
+  phases:
+  - replicasPerNamespace: 1
+    tuningSet: Sequence
+    objectBundle:
+    - basename: list-fs
+      objectTemplatePath: flowSchema.yaml
+      templateFillMap:
+        PriorityLevelName: {{ $PRIORITY_LEVEL_NAME }}
+        PodsNamespace: {{ $NAMESPACE_NAME }}
+
+- name: Creating RoleBinding
+  phases:
+  - namespaceRange:
+      min: 1
+      max: 1
+    replicasPerNamespace: 1
+    tuningSet: Sequence
+    objectBundle:
+    - basename: load-pods-binding
+      objectTemplatePath: roleBinding.yaml
+
+- name: Wait for flow schema and role binding 10s
+  measurements:
+    - Identifier: Wait
+      Method: Sleep
+      Params:
+        duration: 10s
+
+- name: Creating load pods
+  phases:
+  - namespaceRange:
+      min: 1
+      max: 1
+    replicasPerNamespace: 1
+    tuningSet: Sequence
+    objectBundle:
+    - basename: load-deployment
+      objectTemplatePath: deployment.yaml
+      templateFillMap:
+        Object: {{ $LOAD_POD_TARGET }}
+        Qps: {{ $LOAD_POD_QPS }}
+        Replicas: {{ $LOAD_POD_REPLICAS }}
+        ResponseType: {{ $LOAD_POD_RESPONSE_TYPE }}
+
+- name: Waiting for pods to be running
+  measurements:
+    - Identifier: WaitForRunningPods
+      Method: WaitForControlledPodsRunning
+      Params:
+        action: gather
+
+- name: Wait 15min
+  measurements:
+    - Identifier: Wait
+      Method: Sleep
+      Params:
+        duration: 15m
+
+- name: Deleting load pods
+  phases:
+    - namespaceRange:
+        min: 1
+        max: 1
+      replicasPerNamespace: 0
+      tuningSet: Sequence
+      objectBundle:
+        - basename: load-deployment
+          objectTemplatePath: deployment.yaml
+          templateFillMap:
+            Object: {{ $LOAD_POD_TARGET }}
+            Qps: {{ $LOAD_POD_QPS }}
+            Replicas: {{ $LOAD_POD_REPLICAS }}
+            ResponseType: {{ $LOAD_POD_RESPONSE_TYPE }}
+
+- name: Deleting configmaps
+  phases:
+  - namespaceRange:
+      min: 1
+      max: 1
+    replicasPerNamespace: 0
+    tuningSet: Sequence
+    objectBundle:
+    - basename: configmap
+      objectTemplatePath: configmap.yaml

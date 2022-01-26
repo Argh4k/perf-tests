@@ -1,0 +1,39 @@
+{{$name := .Name}}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{.Name}}
+  labels:
+    group: load-pods
+spec:
+  selector:
+    matchLabels:
+      group: load-pods
+      name: {{.Name}}
+  replicas: {{.Replicas}}
+  template:
+    metadata:
+      labels:
+        group: load-pods
+        name: {{.Name}}
+    spec:
+      imagePullPolicy: Always
+      containers:
+        - name: load-pod
+          image: gcr.io/maciejwyrzuc-gke-dev/perf-tests-util/load-pods:v0.0.14
+          args:
+            - --object={{.Object}}
+            - --qps={{.Qps}}
+            - --namespace=$(POD_NAMESPACE)
+            - --response-type={{ .ResponseType }}
+          env:
+          - name: POD_NAMESPACE
+            valueFrom: 
+              fieldRef: 
+                fieldPath: metadata.namespace
+          resources:
+            requests:
+              cpu: {{AddInt 10 .Qps}}m # 1mCpu  per QPS
+              memory: 50Mi
+

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{.Name}}
+  labels:
+    app: {{.Name}}
+data:
+  TEST_KEY1: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas consequat sapien tortor, eget malesuada ipsum egestas non. Pellentesque sit amet ligula mollis libero vulputate tincidunt. Cras vulputate sem at felis iaculis imperdiet. Quisque a molestie metus. Pellentesque interdum sagittis dapibus. Fusce a bibendum purus. Fusce mollis euismod ante, et vehicula metus iaculis a. Phasellus eros massa, pellentesque non dapibus a, hendrerit ac leo. Quisque nec vulputate arcu. Nulla et dolor bibendum, hendrerit lectus a, consequat orci. Vestibulum a sapien arcu. Praesent convallis non urna id tristique. Cras feugiat egestas augue, sit amet luctus leo sollicitudin a. Mauris sed nisi quis elit lobortis commodo porta sed odio. Proin vel semper tortor. Sed sodales velit eget accumsan sollicitudin.
