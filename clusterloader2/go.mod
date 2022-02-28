@@ -59,4 +59,5 @@ require (
 	k8s.io/klog/v2 v2.30.0 // indirect
 	k8s.io/kubelet v0.20.12
 	k8s.io/kubernetes v1.20.12
+	sigs.k8s.io/kind v0.11.1 // indirect
 )

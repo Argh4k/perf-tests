@@ -124,6 +124,9 @@ func RunCommand(pod *corev1.Pod, cmd string) (string, error) {
 	c := exec.Command("kubectl", "exec", fmt.Sprintf("--namespace=%v", pod.Namespace), pod.Name, "--", "/bin/sh", "-x", "-c", cmd)
 	c.Stdout, c.Stderr = &stdout, &stderr
 	if err := c.Run(); err != nil {
+		klog.Warningf("Stdout from kubectl exec: %s", c.Stdout)
+		klog.Warningf("Stderr from kubectl exec: %s", c.Stderr)
+		klog.Warningf("Error is %v", err)
 		return stderr.String(), err
 	}
 	return stdout.String(), nil

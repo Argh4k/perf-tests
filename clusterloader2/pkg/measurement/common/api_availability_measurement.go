@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
 	"k8s.io/perf-tests/clusterloader2/pkg/errors"
@@ -65,6 +66,16 @@ type apiAvailabilityMeasurement struct {
 	lock                   sync.Mutex
 }
 
+func (a *apiAvailabilityMeasurement) checkComponentStatuses(c clientset.Interface) {
+	result, err := c.CoreV1().ComponentStatuses().List(context.Background(), metav1.ListOptions{})
+
+	if err != nil {
+		klog.Warningf("Componentstatuses failed with %v", result)
+	} else {
+		klog.Warningf("Componentstatues succeeded with %v", result)
+	}
+}
+
 func (a *apiAvailabilityMeasurement) updateHostAvailabilityMetrics(c clientset.Interface, provider provider.Provider) {
 	// TODO(#1683): Parallelize polling individual hosts.
 	for _, ip := range a.hostIPs {
@@ -75,6 +86,8 @@ func (a *apiAvailabilityMeasurement) updateHostAvailabilityMetrics(c clientset.I
 		}
 		if !availability {
 			klog.Warningf("host %s not available; HTTP status code: %s", ip, statusCode)
+		} else {
+			klog.Warningf("host %s available; HTTP status code: %s", ip, statusCode)
 		}
 		a.hostLevelMetrics[ip].update(availability)
 	}
@@ -85,7 +98,7 @@ func (a *apiAvailabilityMeasurement) pollHost(hostIP string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("problem with GetPod(): %w", err)
 	}
-	cmd := fmt.Sprintf("curl --connect-timeout %d -s -k -w \"%%{http_code}\" -o /dev/null https://%s:443/readyz", a.hostPollTimeoutSeconds, hostIP)
+	cmd := fmt.Sprintf("curl --connect-timeout %d -k https://%s:443/readyz", a.hostPollTimeoutSeconds, hostIP)
 	output, err := execservice.RunCommand(pod, cmd)
 	if err != nil {
 		return "", fmt.Errorf("problem with RunCommand(): %w", err)
@@ -100,6 +113,8 @@ func (a *apiAvailabilityMeasurement) updateClusterAvailabilityMetrics(c clientse
 	availability := status == http.StatusOK
 	if !availability {
 		klog.Warningf("cluster not available; HTTP status code: %d", status)
+	} else {
+		klog.Warningf("cluster available; HTTP status code: %d", status)
 	}
 	a.clusterLevelMetrics.update(availability)
 }
@@ -157,6 +172,7 @@ func (a *apiAvailabilityMeasurement) start(config *measurement.Config) error {
 				a.isPaused = true
 			case <-time.After(a.pollFrequency):
 				a.updateClusterAvailabilityMetrics(k8sClient)
+				a.checkComponentStatuses(k8sClient)
 				if a.hostLevelAvailabilityEnabled() {
 					a.updateHostAvailabilityMetrics(k8sClient, provider)
 				}
