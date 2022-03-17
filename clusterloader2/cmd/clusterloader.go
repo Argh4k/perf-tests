@@ -25,7 +25,6 @@ import (
 
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
 	"k8s.io/kubernetes/pkg/cluster/ports"
 	"k8s.io/perf-tests/clusterloader2/api"
@@ -188,16 +187,16 @@ func completeConfig(m *framework.MultiClientSet) error {
 	return nil
 }
 
-func verifyCluster(c kubernetes.Interface) error {
-	numSchedulableNodes, err := util.GetSchedulableUntainedNodesNumber(c)
-	if err != nil {
-		return err
-	}
-	if numSchedulableNodes == 0 {
-		return fmt.Errorf("no schedulable nodes in the cluster")
-	}
-	return nil
-}
+// func verifyCluster(c kubernetes.Interface) error {
+// 	numSchedulableNodes, err := util.GetSchedulableUntainedNodesNumber(c)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if numSchedulableNodes == 0 {
+// 		return fmt.Errorf("no schedulable nodes in the cluster")
+// 	}
+// 	return nil
+// }
 
 func getClientsNumber(nodesNumber int) int {
 	return (nodesNumber + nodesPerClients - 1) / nodesPerClients
@@ -274,9 +273,9 @@ func main() {
 		klog.Errorf("Nodes info logging error: %v", err)
 	}
 
-	if err = verifyCluster(mclient.GetClient()); err != nil {
-		klog.Exitf("Cluster verification error: %v", err)
-	}
+	// if err = verifyCluster(mclient.GetClient()); err != nil {
+	// 	klog.Exitf("Cluster verification error: %v", err)
+	// }
 
 	f, err := framework.NewFramework(
 		&clusterLoaderConfig.ClusterConfig,
