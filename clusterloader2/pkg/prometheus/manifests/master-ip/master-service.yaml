@@ -1,7 +1,9 @@
 {{$PROMETHEUS_SCRAPE_NODE_EXPORTER := DefaultParam .PROMETHEUS_SCRAPE_NODE_EXPORTER false}}
 {{$PROMETHEUS_SCRAPE_APISERVER_ONLY := DefaultParam .PROMETHEUS_SCRAPE_APISERVER_ONLY false}}
+{{$PROMETHEUS_SCRAPE_MASTER := DefaultParam .PROMETHEUS_SCRAPE_MASTER true}}
 
 # Service object for the kubelet running on master node.
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -13,8 +15,10 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
+    {{if $PROMETHEUS_SCRAPE_MASTER}}
     - name: apiserver
       port: 443
+    {{end}}
     {{if not $PROMETHEUS_SCRAPE_APISERVER_ONLY}}
     - name: etcd-2379
       port: 2379

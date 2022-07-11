@@ -1,6 +1,7 @@
 {{$PROMETHEUS_SCRAPE_ETCD := DefaultParam .PROMETHEUS_SCRAPE_ETCD false}}
 {{$PROMETHEUS_SCRAPE_MASTER_KUBELETS := DefaultParam .PROMETHEUS_SCRAPE_MASTER_KUBELETS false}}
 {{$PROMETHEUS_SCRAPE_NODE_EXPORTER := DefaultParam .PROMETHEUS_SCRAPE_NODE_EXPORTER false}}
+{{$PROMETHEUS_SCRAPE_MASTER := DefaultParam .PROMETHEUS_SCRAPE_MASTER true}}
 
 # If kube-apiserver is overloaded, we might get slower responses.
 {{$PROMETHEUS_SLOW_APISERVER := DefaultParam .CL2_PROMETHEUS_SLOW_APISERVER false}}
@@ -26,6 +27,7 @@ spec:
     port: node-exporter
     scrapeTimeout: 20s
   {{end}}
+  {{if $PROMETHEUS_SCRAPE_MASTER}}
   - port: apiserver
     scheme: https
     tlsConfig:
@@ -59,5 +61,6 @@ spec:
     scheme: https
     tlsConfig:
       insecureSkipVerify: true
+  {{end}}
   selector:
     k8s-app: master

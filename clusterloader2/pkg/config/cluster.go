@@ -80,6 +80,7 @@ type PrometheusConfig struct {
 	EnableServer                 bool
 	EnablePushgateway            bool
 	ScrapeEtcd                   bool
+	ScrapeMaster                 bool
 	ScrapeNodeExporter           bool
 	ScrapeWindowsNodeExporter    bool
 	ScrapeKubelets               bool
