@@ -18,5 +18,5 @@ spec:
       - image: k8s.gcr.io/pause:3.1
         name: {{.Name}}
         ports:
-        - containerPort: 8086
-          hostPort: 8086
+        - containerPort: 8000
+          hostPort: 8000
