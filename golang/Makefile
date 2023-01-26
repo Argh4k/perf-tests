@@ -14,7 +14,7 @@
 
 .PHONY: build-go build push
 
-export GCS_BUCKET?=k8s-infra-scale-golang-builds
+export GCS_BUCKET?=zawodny-gke-dev
 export GO_COMPILER_PKG?=go1.18.5.linux-amd64.tar.gz
 export GO_COMPILER_URL?=https://dl.google.com/go/$(GO_COMPILER_PKG)
 export ROOT_DIR?=/home/prow/go/src
